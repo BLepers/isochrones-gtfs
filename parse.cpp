@@ -267,6 +267,10 @@ void create_expected_trips(char *dir) {
                cerr << "Day > 6??\n";
                exit(-1);
          }
+         if(!i->scheduled_on_chosen_date) {
+            free(i);
+            continue;
+         }
          i->cancelled_on_chosen_date = 0;
          calendar[service_id] = i;
       }
@@ -286,6 +290,8 @@ void create_cancelled_trips(char *dir) {
    string service_id, date, exception_type, one = "1", two = "2";
    size_t nb_exceptions = stol(exec(_ + "wc -l \"" + trip_file_name + "\"")), done = 0;
    while(in.read_row(service_id, date, exception_type)) {
+      if(date != chosen_day)
+         continue;
       Calendar *i = calendar[service_id];
       if(!i) {
          if(!no_calendar_file)
@@ -610,7 +616,7 @@ int _add_connection(Stop *dst, Source *f) {
       if(e->arrival_time == f->arrival_time) {
          if(e->travel_time <= f->travel_time) {
             // New path takes longer to get there, ignore it
-         } else if(f->travel_time <= max_travel_time) { // Only add stuff less than 10h away
+         } else { // Only add stuff less than 10h away
             // found a shorter way that arrives at the same time!
             assert(e->child == dst);
             e->parent = f->parent;
@@ -684,12 +690,15 @@ void __sssp(Stop *src, int iteration) {
       Source *f = NULL;
       if(e->departure_time == -1) { // we can use that edge whenever (foot/bike transfer)
                                     // So push the edge for all transfers that end up in src
-         for (auto it = src->parents.begin(); it != src->parents.end(); ++it) {
+         for (auto it = src->parents.begin(); it != src->parents.end(); ++it) { // for all the ways to reach the source...
             Source *parent = *it;
 
             if(parent->parent == dst)// don't loop stupidly! Might happen because of walking back and forth between station and bus stop!
                continue;
             if(parent->walking)// don't walk twice, be lazy (avoid combinatory explosion)
+               continue;
+
+            if(parent->travel_time + e->travel_time > max_travel_time) // don't explore too far away, it's not going to be displayed anyways
                continue;
 
             f = new Source();
@@ -733,6 +742,8 @@ void __sssp(Stop *src, int iteration) {
 
          // It is possible that we cannot use that connection (too early to be reachable)
          if(!best)
+            continue;
+         if(best->travel_time + e->travel_time > max_travel_time) // don't explore too far away, it's not going to be displayed anyways
             continue;
 
          // Otherwise we found a way
