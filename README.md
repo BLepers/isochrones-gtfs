@@ -220,6 +220,46 @@ E.g.:
 
 The "username.tileset" value is the one found when making the tileset public (see above).
 
+### Add custom layers to the map (optional)
+
+```bash
+$ cat tracks.params
+nw/highway=tracks
+
+$ osmium tags-filter --expressions=tracks.params world/switzerland-latest.osm.pbf -o output/switzerland-tracks.pbf
+$ ogr2ogr -f GeoJSON output/switzerland-tracks.geojson output/switzerland-tracks.pbf lines
+
+$ cat script-tracks.sh
+#/bin/bash
+
+export MAPBOX_ACCESS_TOKEN=""
+export mapbox_username=""
+tileset_id="switzerland"
+tileset_recipe="
+{
+  \"version\": 1,
+  \"layers\": {
+    \"${tileset_id}-tracks\": {
+      \"source\": \"mapbox://tileset-source/${mapbox_username}/${tileset_id}-tracks\",
+      \"minzoom\": 1,
+      \"maxzoom\": 10
+    }
+  }
+}
+"
+echo $tileset_recipe > ${tileset_id}-tracks.recipe
+
+tilesets upload-source --replace ${mapbox_username} ${tileset_id}-tracks output/${tileset_id}-tracks-fixed.geojson
+tilesets create ${mapbox_username}.${tileset_id}-tracks --recipe ${tileset_id}-tracks.recipe --name "${tileset_id}-tracks"
+tilesets publish ${mapbox_username}.${tileset_id}-tracks
+
+
+$ bash ./script-tracks.sh
+
+```
+
+
+
 ## Enjoy
 
 That's it! Feel free to send me new isochrones to add on the demo map!
