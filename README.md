@@ -223,11 +223,14 @@ The "username.tileset" value is the one found when making the tileset public (se
 ### Add custom layers to the map (optional)
 
 ```bash
-$ cat tracks.params
+$ cat tracks.params 
 nw/highway=tracks
 
+$ cat huts.params
+n/tourism=alpine_hut
+
 $ osmium tags-filter --expressions=tracks.params world/switzerland-latest.osm.pbf -o output/switzerland-tracks.pbf
-$ ogr2ogr -f GeoJSON output/switzerland-tracks.geojson output/switzerland-tracks.pbf lines
+$ ogr2ogr -f GeoJSON output/switzerland-tracks.geojson output/switzerland-tracks.pbf lines # or points for huts
 
 $ cat script-tracks.sh
 #/bin/bash
