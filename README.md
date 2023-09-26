@@ -232,6 +232,29 @@ n/tourism=alpine_hut
 $ osmium tags-filter --expressions=tracks.params world/switzerland-latest.osm.pbf -o output/switzerland-tracks.pbf
 $ ogr2ogr -f GeoJSON output/switzerland-tracks.geojson output/switzerland-tracks.pbf lines # or points for huts
 
+#If the .geojson contains "other_tags", it is better to flatten the structure so that Mapbox can filter the data.
+$ cat sanitize.pl
+#!/usr/bin/perl
+use strict;
+use warnings;
+use JSON;
+use Data::Dumper;
+
+my $data = `cat switzerland-tracks.geojson`;
+my $json = decode_json($data);
+
+for my $f (@{$json->{features}}) {
+   my $p = $f->{properties};
+   if($p->{other_tags}) { # flatten these tags!
+      my $s = eval("{".$p->{other_tags}."}");
+      delete($p->{other_tags});
+      for my $k (keys %$s) {
+         $p->{$k} = $s->{$k};
+      }
+   }
+}
+print JSON->new->pretty->encode($json);
+
 $ cat script-tracks.sh
 #/bin/bash
 
