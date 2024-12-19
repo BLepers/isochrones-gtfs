@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <array>
 #include <map>
 #include <list>
 #include "cvs.h"
@@ -103,7 +104,8 @@ struct vertex *vertices;
 std::string exec(string cmd) {
    std::array<char, 128> buffer;
    std::string result;
-   std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+   auto pclose_wrapper = [](FILE* f) { pclose(f); };
+   std::unique_ptr<FILE, decltype(pclose_wrapper)> pipe(popen(cmd.c_str(), "r"), pclose_wrapper);
    if (!pipe) {
       throw std::runtime_error("popen() failed!");
    }
@@ -135,7 +137,7 @@ void create_stops(char *dir, char *origin) {
       s->is_train = 0;
       s->stop_id = stop_id;
       stop_ids[s->id] = s;
-      if(!stop_names[stop_name]) 
+      if(!stop_names[stop_name])
          stop_names[stop_name] = new std::list<Stop*>();
       stop_names[stop_name]->push_back(s);
       nb_stops++;
@@ -393,7 +395,7 @@ void create_trajectories(char *dir) {
    while(in.read_row(trip_id, arrival_time, departure_time, stop_id, stop_sequence)) {
       line_number++;
 
-      /* 
+      /*
        * stop_times.txt is a list of times for every trip
        * Check if we are still on the same trip. If not, start a new one
        */
@@ -424,7 +426,7 @@ void create_trajectories(char *dir) {
       if(!info)
          goto skip;
       if(!t->is_train && trains_only)
-         goto skip; 
+         goto skip;
       if(!info->scheduled_on_chosen_date)
          goto skip;
       if(info->cancelled_on_chosen_date)
@@ -512,10 +514,10 @@ void create_walks(void) {
             if(s2->stop_lat < s1->stop_lat - 0.001)
                break;
             if(!s2->is_train && trains_only)
-               continue; 
+               continue;
             double dst = distanceEarth(s1->stop_lat, s1->stop_lon, s2->stop_lat, s2->stop_lon);
             if(dst < 100) { // less than 100m, add a walk path!
-                            //if(s1->stop_name == "Bern, Hauptbahnhof") 
+                            //if(s1->stop_name == "Bern, Hauptbahnhof")
                             //cout << s1->stop_name << "walk to " << s2->stop_name << "\n";
                add_edge(s1->id, s2->id, 2, -1, "");
             }
@@ -533,10 +535,10 @@ void create_walks(void) {
             if(s2->stop_lat > s1->stop_lat + 0.001)
                break;
             if(!s2->is_train && trains_only)
-               continue; 
+               continue;
             double dst = distanceEarth(s1->stop_lat, s1->stop_lon, s2->stop_lat, s2->stop_lon);
             if(dst < 100) { // less than 100m, add a walk path!
-                            //if(s1->stop_name == "Bern, Hauptbahnhof") 
+                            //if(s1->stop_name == "Bern, Hauptbahnhof")
                             //cout << s1->stop_name << "walk to " << s2->stop_name << "\n";
                add_edge(s1->id, s2->id, 2, -1, "");
             }

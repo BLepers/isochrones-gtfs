@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <array>
 #include <map>
 #include <list>
 #include "cvs.h"
@@ -103,7 +104,8 @@ struct vertex *vertices;
 std::string exec(string cmd) {
    std::array<char, 128> buffer;
    std::string result;
-   std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+   auto pclose_wrapper = [](FILE* f) { pclose(f); };
+   std::unique_ptr<FILE, decltype(pclose_wrapper)> pipe(popen(cmd.c_str(), "r"), pclose_wrapper);
    if (!pipe) {
       throw std::runtime_error("popen() failed!");
    }
@@ -135,7 +137,7 @@ void create_stops(char *dir, char *origin) {
       s->is_train = 0;
       s->stop_id = stop_id;
       stop_ids[s->id] = s;
-      if(!stop_names[stop_name]) 
+      if(!stop_names[stop_name])
          stop_names[stop_name] = new std::list<Stop*>();
       stop_names[stop_name]->push_back(s);
       nb_stops++;
@@ -393,7 +395,7 @@ void create_trajectories(char *dir) {
    while(in.read_row(trip_id, arrival_time, departure_time, stop_id, stop_sequence)) {
       line_number++;
 
-      /* 
+      /*
        * stop_times.txt is a list of times for every trip
        * Check if we are still on the same trip. If not, start a new one
        */
@@ -424,7 +426,7 @@ void create_trajectories(char *dir) {
       if(!info)
          goto skip;
       if(!t->is_train && trains_only)
-         goto skip; 
+         goto skip;
       if(!info->scheduled_on_chosen_date)
          goto skip;
       if(info->cancelled_on_chosen_date)
@@ -512,10 +514,10 @@ void create_walks(void) {
             if(s2->stop_lat < s1->stop_lat - 0.001)
                break;
             if(!s2->is_train && trains_only)
-               continue; 
+               continue;
             double dst = distanceEarth(s1->stop_lat, s1->stop_lon, s2->stop_lat, s2->stop_lon);
             if(dst < 100) { // less than 100m, add a walk path!
-                            //if(s1->stop_name == "Bern, Hauptbahnhof") 
+                            //if(s1->stop_name == "Bern, Hauptbahnhof")
                             //cout << s1->stop_name << "walk to " << s2->stop_name << "\n";
                add_edge(s1->id, s2->id, 2, -1, "");
             }
@@ -533,10 +535,10 @@ void create_walks(void) {
             if(s2->stop_lat > s1->stop_lat + 0.001)
                break;
             if(!s2->is_train && trains_only)
-               continue; 
+               continue;
             double dst = distanceEarth(s1->stop_lat, s1->stop_lon, s2->stop_lat, s2->stop_lon);
             if(dst < 100) { // less than 100m, add a walk path!
-                            //if(s1->stop_name == "Bern, Hauptbahnhof") 
+                            //if(s1->stop_name == "Bern, Hauptbahnhof")
                             //cout << s1->stop_name << "walk to " << s2->stop_name << "\n";
                add_edge(s1->id, s2->id, 2, -1, "");
             }
@@ -816,7 +818,7 @@ void output_stop(Source *f) {
       if(old == fastest.end() || s->travel_time < old->second)
 	      fastest[departure_time] = s->travel_time;
    }
-   int reachable_times[NB_QUARTER_HOURS] = {};
+   std::vector<std::pair<int,int>> reachable_times[NB_QUARTER_HOURS];
    for(auto s: dst->parents) {
       int nb_quarter = time_to_quarter_hour(s->arrival_time);
       if(nb_quarter >= NB_QUARTER_HOURS) {
@@ -825,15 +827,20 @@ void output_stop(Source *f) {
       int departure_time = s->arrival_time - s->travel_time;
       if(fastest[departure_time] != s->travel_time)
 	      continue;
-      /*if(dst->stop_name == "Chambéry - Challes-les-Eaux") {
-	      cout << "Chambery, from " << s->parent->stop_name << " at time " << h(s->arrival_time) << " travel " << h(s->travel_time) << "\n";
-      }*/
-      reachable_times[nb_quarter]++;
+      //reachable_times[nb_quarter]++;
+      reachable_times[nb_quarter].push_back(std::make_pair(departure_time, s->travel_time));
    }
 
    cout << "{ dst:\"" << dst->stop_name << "\", dsttrain:" << dst->is_train <<", dstlat:" << dst->stop_lat << ", dstlon:" << dst->stop_lon << ", src:\"" << src->stop_name << "\", srctrain:" << src->is_train << ", srclat:" << src->stop_lat << ", srclon:" << src->stop_lon<< ", dur:" << f->travel_time << ", reachable:[";
    for(int r = 0; r < NB_QUARTER_HOURS; r++) {
-      cout << reachable_times[r];
+      //cout << reachable_times[r];
+      cout << "[";
+      for(auto& p: reachable_times[r]) {
+         cout << "{d:" << p.first << ",t:" << p.second << "}";
+         if(&p != &reachable_times[r].back())
+            cout << ",";
+      }
+      cout << "]";
       if(r != NB_QUARTER_HOURS - 1)
          cout << ",";
    }
