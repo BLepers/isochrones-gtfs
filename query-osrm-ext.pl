@@ -84,22 +84,36 @@ foreach my $stop (@$stops) {
 		$is_first = 0;
 	}
 
+
+   #reachable:[[],[],[]]
    my $quarter = 0;
    my $nb_reachable = 0;
-   my @reachables;
+   my $reached = 0;
+   my @reachable_before;
    foreach my $r (@{$stop->{reachable}}) {
       my $nb = scalar(@$r);
       $nb_reachable++ if($nb > 0);
-      $reachables[int($quarter/4)] += $nb; # count reachable per hour
+      $reachable_before[int($quarter/4)] = $nb_reachable; # count reachable per hour
       $quarter++;
    }
-   my $reachable = JSON->new->utf8(0)->encode($stop->{reachable});
-   $reachable =~ s/"/'/smg;
+
+   $quarter = 0;
+   $nb_reachable = 0;
+   my @reachable_after;
+   foreach my $r (reverse @{$stop->{reachable}}) {
+      my $nb = scalar(@$r);
+      $nb_reachable++ if($nb > 0);
+      $reachable_after[int($quarter/4)] = $nb_reachable; # count reachable per hour
+      $quarter++;
+   }
+   @reachable_after = reverse @reachable_after;
+
 	printf ('{ "type": "Feature", "properties": { "name": "'.$stop->{dst}.'", "dur": '.$stop->{dur}.', ');
    for my $i (0..23) {
-      printf (' "reach%d": %d, ', $i, $reachables[$i]);
+      printf (' "rbefore%d": %d, ', $i, $reachable_before[$i]);
+      printf (' "rafter%d": %d, ', $i, $reachable_after[$i]);
    }
-	print ' "nb_reach": '.$nb_reachable.' }, "geometry": { "coordinates": '.encode_json($best_coords).', "type": "LineString" } } ';
+	print ' "nb_reacheable": '.$nb_reachable.' }, "geometry": { "coordinates": '.encode_json($best_coords).', "type": "LineString" } } ';
 
 
 SKIP:

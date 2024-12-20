@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Train and Bus Isochones</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.11.0/mapbox-gl.css" rel="stylesheet" />
+<link href="slider.css" rel="stylesheet" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.11.0/mapbox-gl.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css?family=Montserrat');
+*, *:before, *:after {
+	box-sizing: border-box; 
+}
+
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+.map-overlay label {
+	display: block;
+	margin: 0 0 10px;
+}
+
+h1 {
+	font-family: "Montserrat", sans-serif;
+	font-size: 1.8rem;
+	display: block;
+	margin: 1em;
+   margin-top: 14px;
+}
+h2 {
+	font-family: "Montserrat", sans-serif;
+	font-size: 1.3rem;
+	display: block;
+	margin-bottom:15px;
+}
+label {
+	font-family: "Montserrat", sans-serif;
+	font-size: 1.0rem;
+	cursor: pointer;
+	display: block;
+	margin: 1em;
+}
+label > input {
+	display: none;
+}
+label span {
+	color: #6A759B;
+}
+label i {
+	display: inline-block;
+	width: 60px;
+	height: 30px;
+	border-radius: 14px;
+	vertical-align: middle;
+	transition: 0.25s 0.09s;
+	position: relative;
+	background: #deeff7;
+	margin-right:5px;
+}
+label i:after {
+	content: " ";
+	display: block;
+	width: 20px;
+	height: 20px;
+	top: 5px;
+	left: 5px;
+	border-radius: 50%;
+	background: #fff;
+	position: absolute;
+	box-shadow: 1px 2px 4px 0 rgba(0, 0, 0, 0.4);
+	transition: 0.15s;
+}
+label > input:checked + i {
+	background: #1094fb;
+}
+label > input:checked + i + span {
+	color: #29316b;
+}
+label > input:checked + i:after {
+	transform: translateX(29px);
+}
+
+.container {
+	display: inline-block;
+	margin-bottom:10px;
+}
+input[type=text] {
+	position: relative;
+	padding: 15px 40px 15px 20px;
+	color: #525252;
+	font-size: 16px;
+	font-weight: 100;
+	letter-spacing: 2px;
+	border: none;
+	border-radius: 5px;
+	background: linear-gradient(to right, #FFFFFF 0%, #464747 #F9F9F9 100%);
+	outline: none;
+	width: 190px;
+	margin-left: 14px;
+}
+.search {
+	position: relative;
+	left: -37px;
+	color: #1094fb;
+}
+li {
+	list-style-type: none;
+}
+.map-overlay {
+   font: bold 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+   position: absolute;
+   top: 10px;
+   right: 0;
+   text-align:center;
+   display:flex;
+   flex-direction:column;
+   height:calc(100% - 75px);
+}
+.map-overlay-top {
+   flex-shrink:1;
+   overflow:hidden;
+   padding-right:10px;
+   padding-bottom:10px;
+   position: relative;
+}
+.map-overlay-middle {
+   padding-right:10px;
+   padding-bottom:10px;
+}
+.map-overlay-bottom {
+   padding-right:10px;
+}
+.map-overlay .map-overlay-inner {
+	height:100%;
+	background-color: #f8f9fc;
+	border-radius: 3px;
+	padding: 10px;
+	box-shadow: 4px 8px 10px rgba(0, 0, 0, 0.7);
+}
+
+.map-overlay .map-overlay-inner .scrollable {
+   overflow:auto;
+   height:100%;
+   padding-bottom:30px;
+}
+
+.map-overlay .show-options {
+	cursor:pointer;
+}
+
+.shade {
+	position: absolute;
+	bottom: 0;
+	height: 60px;
+	z-index: 10;
+	background: linear-gradient(rgba(255, 255, 255, 0.001), white);
+	width: calc(100% - 20px);
+	margin:10px;
+	left: 0;
+	pointer-events: none;
+}
+
+@media (pointer: fine) {
+	#menu{
+		display:none;
+	}
+	.map-overlay {
+		width: 278px;
+	}
+	.mobile {
+		display:none;
+	}
+}
+@media (pointer: coarse) {
+	.mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right {
+		z-index:0 !important;
+	}
+	#menu{
+		position: fixed;
+		top:0;
+		right:0;
+		background-color:#9da08e;
+		cursor: pointer;
+		padding: 8px 13px;
+	}
+	.map-overlay {
+		width: 100%;
+		padding-left: 10px;
+	}
+	.map-overlay-hidden {
+		display:none;
+	}
+	.pc {
+		display:none;
+	}
+}
+
+
+
+
+
+.range-slider {
+	margin: 60px 0 0 0%;
+}
+
+#slider_container {
+	position:fixed;
+	bottom:20px;
+	left:50%;
+	width:80%;
+	transform: translateX(-50%);
+}
+
+#schedule {
+	position:fixed;
+	top:0px;
+   left:0px;
+}
+
+
+.range-slider__range {
+	-webkit-appearance: none;
+	width: calc(100% - 105px);
+	max-width:90%;
+	height: 20px;
+	border-radius: 5px;
+	background: linear-gradient(to right, #57bb8a 0%, #73b87e 10%, #94bd77 15%, #b0be6e 20%, #f5ce62 25%, #e9b861 30%, #ecac67 35%, #e79a69 100%);
+	outline: none;
+	padding: 0;
+	margin: 0;
+}
+
+.range-slider__value {
+	display: inline-block;
+	position: relative;
+	width: 130px;
+	color: #fff;
+	line-height: 20px;
+	text-align: center;
+	border-radius: 3px;
+	background: #2c3e50;
+	padding: 5px 10px;
+	margin-left: 8px;
+	top:-6px;
+}
+.range-slider__value::after {
+	position: absolute;
+	top: 8px;
+	left: -7px;
+	width: 0;
+	height: 0;
+	border-top: 7px solid transparent;
+	border-right: 9px solid #2c3e50;
+	border-bottom: 7px solid transparent;
+	content: '';
+}
+
+input[type=range]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	border: 1px solid #000000;
+	height: 36px;
+	width: 16px;
+	border-radius: 3px;
+	background: #ffffff;
+	cursor: pointer;
+	margin-top: 0px;
+	box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+}
+
+input[type=range]::-moz-range-thumb {
+	box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+	border: 1px solid #000000;
+	height: 36px;
+	width: 16px;
+	border-radius: 3px;
+	background: #ffffff;
+	cursor: pointer;
+}
+
+input[type=range]::-ms-thumb {
+	box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+	border: 1px solid #000000;
+	height: 36px;
+	width: 16px;
+	border-radius: 3px;
+	background: #ffffff;
+	cursor: pointer;
+}
+
+.loading {
+	width:50px;
+	height:50px;
+	display:inline-block;
+	top:50%;
+	left:50%;
+	position:fixed;
+	transform: translate(-50%, -50%);
+}
+
+.palette-container {
+	display:flex;
+	height:25px;
+}
+.palette-choice {
+	flex-grow:1;
+	flex-shrink:1;
+	margin:3px;
+	border-radius: 5px;
+	box-shadow: 0 0 4px #000;
+	cursor:pointer;
+}
+.marker {
+background-image: url('https://docs.mapbox.com/mapbox-gl-js/assets/pin.svg');
+background-size: cover;
+cursor: pointer;
+}
+</style>
+<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<script src="svg.min.js"></script>
+<script src="slider.js"></script>
+</head>
+<body>
+<div id="map"></div>
+<div id="schedule"></div>
+<div class="map-overlay map-overlay-hidden">
+	<div class="map-overlay-top">
+		<div class="map-overlay-inner">
+			<div class="scrollable">
+				<h1>Available Isochrones</h1>
+				<div class="container">
+					<input placeholder="Search..." class="js-search" type="text" id="searchbox">
+					<i class="fa fa-search search"></i>
+				</div>
+
+				<div id="cities">
+				</div>
+			</div>
+			<div id="shade" class="shade"></div>
+		</div>
+	</div>
+	<div class="map-overlay-middle mobile">
+		<div class="map-overlay-inner show-options">
+			SHOW OPTIONS
+		</div>
+	</div>
+	<div class="map-overlay-middle pc">
+		<div class="map-overlay-inner">
+			<div style="text-align:left;margin: auto;display: inline-block;">
+				<label><input id='bus' class='cb cb1' type='checkbox' checked/><i></i><span>Bus Stops (Zoom)</span></label>
+				<div class="palette-container">
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="map-overlay-bottom pc">
+		<div class="map-overlay-inner">
+			<div style="text-align:justify;">Travel times include waiting time when changing train/bus. The travel times are computed from the train/bus operators using their GTFS timetables.</div>
+			<br/>
+			<span style="text-align:center;"><a href="https://github.com/BLepers/isochrones-gtfs">Help us add more isochrones, it's easy!</a></span>
+			<br/>
+			<span style="text-align:center;color:#999;display:inline-block;padding-top:5px;">baptiste.lepers@gmail.com</span>
+		</div>
+	</div>
+</div>
+
+<div id="slider_container">
+   <div id='map_canvas_filter' style='z-index:99998;bottom:60px;left:50%;position:absolute;transform: translateX(-50%);width:100%;min-height:50px;color:#000'>
+      <div style="width:100%;display:flex;left:50%;position:absolute;transform: translateX(-50%);">
+         <div style="flex:1;transform: translateY(7px);">
+            <div style="width:90%;position:absolute;padding-left:10px">
+               <div id='hours-slider-range'></div>
+               <div style="display:inline;background:#fff"><strong style="padding-left:10px">Arrival time (after):</strong> <span id="slider-range-value1"></span></div>
+               <div style="position:absolute;right:10px;display:inline;background:#fff"><strong>Arrival time (before):</strong> <span id="slider-range-value2"></span></div>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <div style="margin-bottom:5px">
+      <input id='slider_freq' class='range-slider__range' style="direction: rtl" type='range' min='0' max='60' step='1' value='0' /><span class="range-slider__value" id="slider_value_freq">0</span>
+   </div>
+   <input id='slider_dur' class='range-slider__range' type='range' min='0' max='600' step='1' value='600' /><span class="range-slider__value" id="slider_value_dur">0</span>
+</div>
+
+<div class="loading">
+	<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="margin: auto; background: transparent; display: block; shape-rendering: auto;" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
+<path fill="none" stroke="#e90c59" stroke-width="8" stroke-dasharray="42.76482137044271 42.76482137044271" d="M24.3 30C11.4 30 5 43.3 5 50s6.4 20 19.3 20c19.3 0 32.1-40 51.4-40 C88.6 30 95 43.3 95 50s-6.4 20-19.3 20C56.4 70 43.6 30 24.3 30z" stroke-linecap="round" style="transform:scale(0.8);transform-origin:50px 50px">
+  <animate attributeName="stroke-dashoffset" repeatCount="indefinite" dur="1s" keyTimes="0;1" values="0;256.58892822265625"></animate>
+</path>
+<!-- [ldio] generated by https://loading.io/ --></svg>
+</div>
+<div id="menu"><svg viewBox="0 0 100 80" width="40" height="40">
+  <rect width="100" height="20"></rect>
+  <rect y="30" width="100" height="20"></rect>
+  <rect y="60" width="100" height="20"></rect>
+</svg></div>
+<script>
+var currentId = ''; // Currently displayed isochrone (id)
+var currentLayerRails = ''; // Name of the current railways layer (id-rails)
+var currentLayerStops = ''; // Name of the current bus stop layer (id-stations)
+
+mapboxgl.accessToken = 'pk.eyJ1Ijoiam9lcHBtbW1tbSIsImEiOiJjbGoxaXZsb20wa3dsM25sZDBpb245Zmc2In0.WBCjDfJZNVCYQpcQTii6ZA';
+
+/*
+ * Available isochrones.
+ * Assumptions: id = prefix of the name of the mapbox tileset, which needs to be public.
+ *     id-rails is the tileset that contains the line railway data
+ *     id-stations is the tileset that contains the point stop data
+ *     Both need to have specifically named layers:
+ *     E.g.: "username-bern-rail" needs to contain a layer named "bern-rail" that contains line data.
+ *     E.g.: "username-bern-stations" needs to contain a layer named "bern-stations" that contains point data.
+ *     The scripts should create that automatically.
+ */
+const isochrones = [
+	{ id:"joeppmmmmm-count-gre", country:"France", city:"Grenoble", lat:45.19129211376214, lon:5.713786728888566 },
+	{ id:"joeppmmmmm-count-gre-sat", country:"France", city:"Grenoble (Saturday)", lat:45.19129211376214, lon:5.713786728888566 },
+	{ id:"joeppmmmmm-count-gre-sun", country:"France", city:"Grenoble (Sunday)", lat:45.19129211376214, lon:5.713786728888566 },
+	{ id:"joeppmmmmm-count-neuch", country:"Switzerland", city:"Neuchâtel", lat:46.99665706459026, lon:6.9358125237962875 },
+	/*{ id:"joeppmmmmm-swiss-bern-full", country:"Switzerland", city:"Bern", lat:46.94871, lon:7.43652 },
+	{ id:"joeppmmmmm-swiss-zurich-full", country:"Switzerland", city:"Zürich", lat:47.37788155064584, lon:8.540172236217629 },
+	{ id:"joeppmmmmm-swiss-neuch-full", country:"Switzerland", city:"Neuchâtel", lat:46.99665706459026, lon:6.9358125237962875 },
+	{ id:"joeppmmmmm-swiss-lausanne-full", country:"Switzerland", city:"Lausanne", lat:46.5167793685513, lon:6.629085779335344 },
+	{ id:"joeppmmmmm-fr-prs-full", country:"France", city:"Paris", lat:48.858174226824104, lon:2.3470629206115166 },
+	{ id:"joeppmmmmm-swiss-gre-full", country:"France", city:"Grenoble", lat:45.19129211376214, lon:5.713786728888566 },
+	{ id:"joeppmmmmm-fr-calais-full", country:"France", city:"Calais", lat:50.95343683330458, lon:1.8506327268911682 },
+	{ id:"joeppmmmmm-fr-quimper-full", country:"France", city:"Quimper", lat:47.99449233108093, lon:-4.092386843759182 },
+	{ id:"joeppmmmmm-fr-nice-full", country:"France", city:"Nice", lat:43.70453505457529, lon:7.261897378591278 },
+	{ id:"joeppmmmmm-fr-cherbourg-full", country:"France", city:"Cherbourg", lat:49.63336807843752, lon:-1.6216578283546956 },
+	{ id:"joeppmmmmm-ger-munich-full", country:"Germany", city:"Münich", lat:48.14008789261679, lon:11.55856033429579 },*/
+];
+
+/* Available color palettes, format is time, color, time, color, etc. */
+const palettes_freq = [
+	[ 0, "#dd776e", 5, "#e79a69", 10, "#e9b861", 20, "#94bd77", 30, "#57bb8a", 60, "#57bb8a"],
+];
+const palettes_dur = [
+	[ 0, "#57bb8a", 60, "#63b682", 90, "#73b87e", 120, "#84bb7b", 150, "#94bd77", 180, "#a4c073", 210, "#b0be6e", 240, "#c4c56d", 270, "#d4c86a", 300, "#e2c965", 330, "#f5ce62", 360, "#e9b861", 390, "#e6ad61", 420, "#ecac67", 450, "#e9a268", 480, "#e79a69", 510, "#e5926b", 540, "#e2886c", 570, "#e0816d", 600, "#dd776e" ],
+];
+
+
+/*
+ * Init - Create the map
+ */
+const map = new mapboxgl.Map({
+	container: 'map', // container ID
+	style: 'mapbox://styles/mapbox/light-v11', // style URL
+	center: [8.28, 47.38], // starting position [lng, lat]
+	zoom: 5, // starting zoom
+	hash:true,
+	projection: {
+            name: 'equalEarth'
+        }
+});
+
+/* On load, add the first isochrone */
+var sourceLoadingCallback = null;
+var sourceId = null;
+map.on('sourcedata', function(e) {
+	if (map.getSource(sourceId) && map.isSourceLoaded(sourceId)) {
+		if(sourceLoadingCallback) {
+			var tmp = sourceLoadingCallback;
+			sourceLoadingCallback = null;
+			tmp();
+		}
+	}
+});
+map.on('load', () => {
+	sourceId = isochrones[0].id.replace('-','.')+'-rails';
+	sourceLoadingCallback = function() {
+		sourceLoadingCallback = null;
+		$('#'+isochrones[0].id).click();
+	};
+	map.addSource(sourceId, {
+		type: 'vector',
+		url: 'mapbox://'+sourceId
+	});
+});
+
+/*
+ * Idle callback = what to do once we have added a layer on the map?
+ * Set in the various functions that add a layer.
+ */
+var idleCallback = null;
+map.on('idle', function(e) {
+   if(idleCallback)
+      idleCallback();
+});
+
+map.on('click', (e) => {
+   $("#schedule").empty();
+
+   // Set `bbox` as 5px reactangle area around clicked point.
+   const bbox = [
+      [e.point.x - 10, e.point.y - 10],
+      [e.point.x + 10, e.point.y + 10]
+   ];
+   // Find features intersecting the bounding box.
+   const selectedFeatures = map.queryRenderedFeatures(bbox, {
+      layers: [currentId+'-stations']
+   });
+   for(var i = 0; i < selectedFeatures.length; i++) {
+      var feature = selectedFeatures[i];
+      if(!feature.properties.reachable)
+         continue;
+      var reachable = JSON.parse(feature.properties.reachable.replaceAll("'",'"'));
+      showSchedule(feature.properties.name, reachable);
+   }
+});
+
+/*
+ * Add the available isochrones in the dropdown menu
+ */
+var last_country = "";
+for(var i in isochrones) {
+	var iso = isochrones[i];
+	if(iso.country != last_country) {
+		$("#cities").append("<h2>"+iso.country+"</h2><div style='text-align:left;margin: auto;display: inline-block;'></div>");
+		last_country = iso.country;
+	}
+	$("#cities div").last().append("<label><input id='"+iso.id+"' class='cb cb1' type='checkbox' /><i></i><span>"+iso.city+"</span></label>");
+	var checkbox = $("#"+iso.id);
+	checkbox.on('click', function() {
+		if(this.checked)
+			$("#cities input[type='checkbox']:checked").not(this).click();
+		var id = $(this).attr('id');
+		addLayer(id, this.checked);
+	});
+	var marker = new mapboxgl.Marker().setLngLat([iso.lon, iso.lat]).addTo(map);
+	marker.getElement().children[0].style.transform = 'scale(0.5)';
+	marker.getElement().style.cursor = 'pointer';
+	marker.getElement().addEventListener('click', function(checkbox) {
+		return function() { checkbox.click(); }
+        }(checkbox));
+}
+
+/*
+ * Add the buttons to select the palette
+ */
+var currentPalette = 0;
+for(var i = 0; i < palettes_dur.length; i++) {
+	$('.palette-container').append('<div id="palette'+i+'" class="palette-choice" style="background:'+getGradientDur(i)+'"></div>');
+	$('#palette'+i).click({palette:i}, function(e) {
+		setColorSlider(e.data.palette);
+	});
+}
+setColorSlider(0);
+
+/* 
+ * Add actions for the searchbox
+ */
+var searchb = $("#searchbox");
+searchb.on('input', function(e) {
+	var txt = e.target.value.normalize('NFD').replace(/\p{Diacritic}/gu, "");
+	if(txt == "") {
+		$("#cities h2").css("display", "inline-block");
+		$("#cities label").css("display", "block");
+	} else {
+		$("#cities h2").css("display", "none");
+		$("#cities label").css("display", "none");
+	}
+	var reg = new RegExp(txt, "i")
+	$("#cities span").each(function(id, elt) {
+		// Fancy regex to match without weird characters
+		var city = $(elt).text().normalize('NFD').replace(/\p{Diacritic}/gu, "");
+		if(city.match(reg)) { // Only display cities that match the searched text
+			$(elt).parent().css("display", "block");
+		}
+
+	});
+});
+
+/*
+ * For mobiles, add the actions to display or hide the menus
+ */
+$("#menu").click(function() {
+	$(".map-overlay").toggleClass('map-overlay-hidden');
+});
+$('.show-options').click(function() {
+	$('.map-overlay .mobile').remove();
+	$('.map-overlay .pc').removeClass('pc');
+});
+
+
+/*
+ * Add the railway for a specific city
+ * The function is called on all city, but only one will have checked == true.
+ */
+function addLayer(id, checked) {
+   /* Remove the layers of unchecked cities and all bus stops */
+   if(map.getLayer(id+'-stations'))
+      map.removeLayer(id+'-stations');
+   if(!checked) {
+      if(map.getLayer(id+'-rails'))
+	    map.removeLayer(id+'-rails');
+      return;
+   }
+
+   /* Now reload the current city railways */
+   currentId = id;
+   currentLayerRails = id+'-rails';
+   currentLayerStops = id+'-stations';
+   sourceId = currentLayerRails.replace('-','.');
+
+   /* If the geojson is not loaded, load it */
+   if (!map.getSource(sourceId) || !map.isSourceLoaded(sourceId)) {
+	sourceLoadingCallback = function() { addLayer(id, checked); };
+        map.addSource(sourceId, {
+		type: 'vector',
+		url: 'mapbox://'+sourceId
+	});
+	return;
+   }
+
+	map.addLayer({
+		'id': currentLayerRails,
+		'type': 'line',
+		'source': sourceId,
+		'source-layer': sourceId.replace(/.*?\./, ''),
+		'layout': {
+			'line-join': 'round',
+			'line-cap': 'round'
+		},
+		"filter": [">=", ["get", "dur"], 0],
+		"paint": {
+			"line-color": [
+				"interpolate",
+				["linear"],
+				["get", "dur"],
+				...palettes_dur[currentPalette]
+			],
+			"line-width": [
+				"interpolate",
+				["linear"],
+				["get", "dur"],
+				3, 5,
+				180.5,	3,
+				210, 2,
+				806, 1
+			]
+		}
+	}, 'road-label-simple');
+	$(".map-overlay").addClass('map-overlay-hidden');
+	addStations();
+   setFilters();
+}
+
+/*
+ * Show the schedule for a given stop
+ */
+function showSchedule(name, reachable) {
+   var box_width = 15;
+   var header_width = 20;
+   var nb_boxes = 4;
+
+
+   var draw = SVG().addTo('#schedule').size(box_width*(nb_boxes + 2) + header_width + 2, box_width*24);
+   var rect = draw.rect(box_width*(nb_boxes + 2) + header_width + 2, box_width*24).attr({ fill: '#fff' })
+
+   var group = draw.nested().size(header_width, box_width*24);
+   var rect = group.rect(header_width - 1, "100%").attr({ fill: '#b0be6e' })
+   var text = group.text(name).amove(-350,15).attr("transform", "rotate(-90)");
+
+   for(var i = 0; i < 24; i++) {
+      var group = draw.nested().size(box_width*(nb_boxes+2), box_width).move(header_width, box_width*i);
+      var rect = group.rect(box_width*2-1, box_width-1).attr({ fill: '#d4c86a' }).move(0, 0);
+      var text = group.text(i).amove(box_width,13).attr("text-anchor","middle");
+      for(var j = 0; j < nb_boxes; j++) {
+         var avail = reachable[i*nb_boxes+j].length >= 1;
+         var rect = group.rect(box_width-1, box_width-1).attr({ fill: avail?'#57bb8a':'#dd776e' }).move(box_width*(j+2), 0);
+      }
+   }
+}
+/*
+ * Add the bus stops, only visible when the rail is not animated for performance reasons
+ */
+function addStations() {
+   if(map.getLayer(currentLayerStops))
+      map.removeLayer(currentLayerStops);
+   $('.loading').stop(true, false).css('display', 'none');
+
+   if(!$("#bus").is(':checked'))
+      return;
+
+   /* If the geojson is not loaded, load it */
+   sourceId = currentLayerStops.replace('-','.');
+   if (!map.getSource(sourceId) || !map.isSourceLoaded(sourceId)) {
+	sourceLoadingCallback = function() { addStations(); };
+        map.addSource(sourceId, {
+		type: 'vector',
+		url: 'mapbox://'+sourceId
+	});
+	return;
+   }
+   map.addLayer({
+         "id": currentLayerStops,
+         "type": "circle",
+         "source": sourceId,
+         "source-layer": sourceId.replace(/.*?\./, ''),
+         "layout": {},
+         "paint": {
+             "circle-radius": [
+                 "interpolate",
+                 ["linear"],
+                 ["zoom"],
+                 0, 3,
+                 9.63, 3,
+                 11.3, 3,
+                 22, 3
+             ],
+             "circle-opacity": [
+                 "interpolate",
+                 ["linear"],
+                 ["zoom"],
+                 0, 0,
+                 7.29, 0,
+                 8.57, 0.3,
+                 10, 0.99,
+                 22, 0.99
+             ],
+             "circle-color": [
+                 "interpolate",
+                 ["linear"],
+                 ["get", "dur"],
+                ...palettes_dur[currentPalette]
+             ],
+             "circle-stroke-opacity": [
+                 "interpolate",
+                 ["linear"],
+                 ["zoom"],
+                 0, 0,
+                 9.5, 0,
+                 10, 0.5,
+                 22, 1
+             ],
+             "circle-stroke-width": 1
+         }
+     });
+     setFilters();
+}
+
+$('#option-button').click(function() {
+   $('.hidden-options').removeClass('hidden-options');
+});
+
+var val_freq = parseInt($('#slider_freq').val(), 10);
+var val_dur = parseInt($('#slider_dur').val(), 10);
+var val_min_arr = 0;
+var val_max_arr = 24;
+
+function setFilters() {
+    /*var filter = ['any'];
+    for(var i = val_min_arr; i < val_max_arr; i++) {
+        filter.push(['>', ['get', 'reach'+i], 0]);
+    }*/
+    var filter = ['all'];
+    filter.push(['>', ['get', 'rafter'+val_min_arr], 0]);
+    filter.push(['>', ['get', 'rbefore'+(val_max_arr-1)], 0]);
+    filter.push(['<=', ['get', 'dur'], val_dur]);
+    filter.push(['>=', ['get', 'nb_reachable'], val_freq]);
+
+    if(map.getLayer(currentLayerRails))
+       map.setFilter(currentLayerRails, filter);
+    if(map.getLayer(currentLayerStops))
+         map.setFilter(currentLayerStops, filter);
+      console.log(filter);
+}
+
+$('#slider_freq').on('input', (event) => {
+	const min = parseInt(event.target.value, 10);
+   var txt = "> "+Math.floor(min)+" stops/day";
+	$('#slider_value_freq').text(txt);
+   val_freq = min;
+   setFilters();
+});
+
+$('#slider_dur').on('input', (event) => {
+	var min = parseInt(event.target.value, 10);
+   var txt = min < 0 ? "-":"";
+   min = Math.abs(min);
+   txt += Math.floor(min / 60)+"h";
+   if(Math.floor(min % 60) != 0)
+         txt += (Math.floor(min % 60)<10?"0":"")+Math.floor(min % 60);
+	$('#slider_value_dur').text(txt);
+   val_dur = min;
+   setFilters();
+});
+
+$('#bus').click(function() {
+      if(map.getLayer(currentLayerStops))
+         map.removeLayer(currentLayerStops);
+      if($(this).is(':checked'))
+         addStations();
+      $('#slider_dur').trigger('input');
+});
+
+function getGradientFreq(palette) {
+	var i;
+	var str = "linear-gradient(to left ";
+	for(i = 0; i < palettes_freq[palette].length; i+= 2) {
+		var percent = palettes_freq[palette][i] / parseInt($('#slider_freq').attr('max'));
+		var color = palettes_freq[palette][i+1];
+		str += ", "+color+" "+(Math.floor(percent*100))+"% ";
+	}
+	str += ", "+palettes_freq[palette][i-1]+" 100%)";
+	return str;
+}
+
+function getGradientDur(palette) {
+	var i;
+	var str = "linear-gradient(to right ";
+	for(i = 0; i < palettes_dur[palette].length; i+= 2) {
+		var percent = palettes_dur[palette][i] / parseInt($('#slider_dur').attr('max'));
+		var color = palettes_dur[palette][i+1];
+		str += ", "+color+" "+(Math.floor(percent*100))+"% ";
+	}
+	str += ", "+palettes_dur[palette][i-1]+" 100%)";
+	return str;
+}
+
+function setColorSlider(palette) {
+	currentPalette = palette;
+	$('#slider_freq').css('background', getGradientFreq(palette));
+	$('#slider_dur').css('background', getGradientDur(palette));
+	if(map.getLayer(currentLayerRails))
+		map.setPaintProperty(currentLayerRails, 'line-color', ["interpolate", ["linear"], ["get", "dur"], ...palettes_dur[currentPalette] ]);
+	if(map.getLayer(currentLayerStops))
+		map.setPaintProperty(currentLayerStops, 'circle-color', ["interpolate", ["linear"], ["get", "dur"], ...palettes_dur[currentPalette] ]);
+}
+
+var rangeSlider = document.getElementById('hours-slider-range');
+var min = undefined, max = undefined;
+
+noUiSlider.create(rangeSlider, {
+   start: [0, 24],
+   step: 1,
+   range: {
+      'min': 0,
+      'max': 24
+   },
+   connect: true
+});
+
+rangeSlider.noUiSlider.on('update', function(values, handle) {
+ $('#slider-range-value1').html(parseInt(values[0], 10));
+ $('#slider-range-value2').html(parseInt(values[1], 10));
+});
+
+rangeSlider.noUiSlider.on('change', function(values, handle) {
+    val_min_arr = parseInt(values[0], 10);
+    val_max_arr = parseInt(values[1], 10);
+    setFilters();
+});
+
+$('#slider_freq').trigger('input');
+$('#slider_dur').trigger('input');
+</script>
+</body>
+</html>
