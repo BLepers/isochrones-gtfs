@@ -113,7 +113,7 @@ foreach my $stop (@$stops) {
       printf (' "rbefore%d": %d, ', $i, $reachable_before[$i]);
       printf (' "rafter%d": %d, ', $i, $reachable_after[$i]);
    }
-	print ' "nb_reacheable": '.$nb_reachable.' }, "geometry": { "coordinates": '.encode_json($best_coords).', "type": "LineString" } } ';
+	print ' "nb_reachable": '.$nb_reachable.' }, "geometry": { "coordinates": '.encode_json($best_coords).', "type": "LineString" } } ';
 
 
 SKIP:
