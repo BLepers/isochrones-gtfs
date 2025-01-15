@@ -224,7 +224,7 @@ The "username.tileset" value is the one found when making the tileset public (se
 
 ```bash
 $ cat tracks.params 
-nw/highway=tracks
+nw/highway=track
 
 $ cat huts.params
 n/tourism=alpine_hut

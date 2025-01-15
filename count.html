@@ -506,6 +506,8 @@ map.on('click', (e) => {
          continue;
       var reachable = JSON.parse(feature.properties.reachable.replaceAll("'",'"'));
       showSchedule(feature.properties.name, reachable);
+      if(i > 4)
+         break;
    }
 });
 
