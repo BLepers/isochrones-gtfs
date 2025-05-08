@@ -32,6 +32,6 @@ foreach my $stop (@$stops) {
 	} else {
 		$is_first = 0;
 	}
-	printf ('{ "type": "Feature", "properties": { "name": "'.$stop->{dst}.'", "dur": '.$stop->{dur}.' }, "geometry": { "coordinates": [%f,%f], "type": "Point" } } ', $stop->{dstlon}, $stop->{dstlat});
+	printf ('{ "type": "Feature", "properties": { "name": "'.$stop->{dst}.'", "dur": '.$stop->{dur}.', "train": '.$stop->{dsttrain}.' }, "geometry": { "coordinates": [%f,%f], "type": "Point" } } ', $stop->{dstlon}, $stop->{dstlat});
 }
 say '], "type": "FeatureCollection" }';

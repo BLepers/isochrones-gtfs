@@ -63,6 +63,6 @@ foreach my $stop (@$stops) {
       printf (' "rbefore%d": %d, ', $i, $reachable_before[$i]);
       printf (' "rafter%d": %d, ', $i, $reachable_after[$i]);
    }
-   printf (' "nb_reachable": '.$nb_reachable.' }, "geometry": { "coordinates": [%f,%f], "type": "Point" } } ', $stop->{dstlon}, $stop->{dstlat});
+   printf (' "nb_reachable": '.$nb_reachable.', "train": '.$stop->{dsttrain}.' }, "geometry": { "coordinates": [%f,%f], "type": "Point" } } ', $stop->{dstlon}, $stop->{dstlat});
 }
 say '], "type": "FeatureCollection" }';
