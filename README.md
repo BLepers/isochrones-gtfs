@@ -223,14 +223,27 @@ The "username.tileset" value is the one found when making the tileset public (se
 ### Add custom layers to the map (optional)
 
 ```bash
+# for tracks
 $ cat tracks.params 
 nw/highway=tracks
-
-$ cat huts.params
-n/tourism=alpine_hut
-
 $ osmium tags-filter --expressions=tracks.params world/switzerland-latest.osm.pbf -o output/switzerland-tracks.pbf
-$ ogr2ogr -f GeoJSON output/switzerland-tracks.geojson output/switzerland-tracks.pbf lines # or points for huts
+$ ogr2ogr -f GeoJSON output/switzerland-tracks.geojson output/switzerland-tracks.pbf lines
+
+# for huts
+$ cat huts.params
+nw/tourism=alpine_hut
+$ osmium tags-filter --expressions=huts.params world/switzerland-latest.osm.pbf -o output/switzerland-huts.pbf
+$ ogr2ogr -f GeoJSON output/france-huts.geojson output/france-huts.pbf   -dialect sqlite   -sql "
+    SELECT osm_id, name,
+           hstore_get_value(other_tags, 'tourism') AS tourism,
+           geometry
+    FROM points
+    UNION ALL
+    SELECT osm_way_id AS osm_id, name,
+           tourism,
+           ST_PointOnSurface(geometry) AS geometry
+    FROM multipolygons
+  "
 
 #If the .geojson contains "other_tags", it is better to flatten the structure so that Mapbox can filter the data.
 $ cat sanitize.pl
